@@ -3,6 +3,7 @@ name: Build and Deploy
 on:
   push:
     branches: [ci/workflow]
+
 permissions:
   contents: read
   packages: write
@@ -15,6 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set repo lowercase
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       - name: Login to GHCR
         run: |
           echo "${{ github.token }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -25,14 +29,14 @@ jobs:
       - name: Build image
         run: |
           docker build \
-            -t ghcr.io/${{ github.repository }}:latest \
-            -t ghcr.io/${{ github.repository }}:${{ env.SHA_SHORT }} \
+            -t ghcr.io/${{ env.REPO_LC }}:latest \
+            -t ghcr.io/${{ env.REPO_LC }}:${{ env.SHA_SHORT }} \
             .
 
       - name: Push image
         run: |
-          docker push ghcr.io/${{ github.repository }}:latest
-          docker push ghcr.io/${{ github.repository }}:${{ env.SHA_SHORT }}
+          docker push ghcr.io/${{ env.REPO_LC }}:latest
+          docker push ghcr.io/${{ env.REPO_LC }}:${{ env.SHA_SHORT }}
 
       - name: Deploy on VM
         uses: appleboy/ssh-action@v1.0.3
@@ -41,8 +45,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            
-            docker pull ghcr.io/${{ github.repository }}:latest
+            docker pull ghcr.io/${{ env.REPO_LC }}:latest
 
             docker stop discord-bot 2>/dev/null || true
             docker rm discord-bot 2>/dev/null || true
@@ -52,4 +55,4 @@ jobs:
               --restart unless-stopped \
               -e BOT_TOKEN=${{ secrets.BOT_TOKEN }} \
               -e APPLICATION_ID=${{ secrets.APPLICATION_ID }} \
-              ghcr.io/${{ github.repository }}:latest
+              ghcr.io/${{ env.REPO_LC }}:latest
