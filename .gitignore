@@ -4,6 +4,7 @@
 
 .env
 .idea
+build-run.sh
 
 # User-specific stuff
 .idea/**/workspace.xml
